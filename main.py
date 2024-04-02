@@ -3,6 +3,8 @@ import dotenv
 from telethon import TelegramClient, events
 from telethon.tl.types import MessageMediaGiveaway
 from telethon.tl.functions.channels import JoinChannelRequest, GetFullChannelRequest
+from telethon.tl.functions.messages import SendMessageRequest
+from telethon.tl.types import InputReplyToMessage
 import pickle
 
 
@@ -13,6 +15,7 @@ client = TelegramClient('jackP', api_id, api_hash)
 
 channel_set = set()
 pkl_file = 'channel_set.pkl'
+tg_premium_channel_id = -1002082273663
 
 if not os.path.exists(pkl_file):
     with open(pkl_file, 'wb') as f:
@@ -48,12 +51,19 @@ async def handle_new_message(event):
         member_counts.append(full_channel.full_chat.participants_count)
         print("Member count: ", full_channel.full_chat.participants_count)
     
-    gift_ratio = min(member_counts) / giveaway.quantity
+    participants = min(member_counts)
+    gift_ratio = participants / giveaway.quantity
     print("Participants to Gift ratio: ", gift_ratio)
     
     if gift_ratio > 10000:
         print("Gift ratio is more than 10k")
         return
+    
+    # Notify the user about the giveaway by replying to a message in another chat of specific id
+    channel = await client.get_input_entity(event.chat_id)
+    input_reply = InputReplyToMessage(event.message.id, reply_to_peer_id=channel)
+    
+    await client(SendMessageRequest(tg_premium_channel_id, f"Giveaway Alert: Participating with Quantity: {giveaway.quantity} Minimum Participants: {participants}, ratio: {gift_ratio}", reply_to=input_reply))
 
     # Participate in the giveaway
     for channel_id in giveaway.channels:
@@ -67,7 +77,8 @@ async def handle_new_message(event):
         channel_set.add(input_channel.channel_id)
         with open(pkl_file, 'wb') as f:
             pickle.dump(channel_set, f)
-        print(channel_set)            
+            
+    print(channel_set)            
                 
 
 client.start()

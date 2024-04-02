@@ -1,7 +1,9 @@
 import os
 import dotenv
 from telethon import TelegramClient, events
-from telethon.tl.functions.channels import GetFullChannelRequest
+from telethon.tl.functions.channels import GetFullChannelRequest, GetSendAsRequest
+from telethon.tl.functions.messages import SendMediaRequest
+
 
 # ------------------------------------------------
 # This File is for testing telethon api & Project planning
@@ -16,6 +18,8 @@ dotenv.load_dotenv()
 api_id = int(os.environ['API_ID'])
 api_hash = os.environ['API_HASH']
 client = TelegramClient('jackP', api_id, api_hash)
+
+# Media Archived: -1001506456927
 
 async def main():
     # me  = await client.get_me()
