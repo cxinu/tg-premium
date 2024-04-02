@@ -37,8 +37,8 @@ async def handle_new_message(event):
     if giveaway.countries_iso2 and 'IN' not in giveaway.countries_iso2:
         return
     
-    print("checking in...")
     
+    # check if the giveaway is worth participating
     print("Quantity of giveaway: ", giveaway.quantity)
     member_counts = []
     for channel_id in giveaway.channels:
@@ -50,22 +50,24 @@ async def handle_new_message(event):
     
     gift_ratio = min(member_counts) / giveaway.quantity
     print("Participants to Gift ratio: ", gift_ratio)
+    
+    if gift_ratio > 10000:
+        print("Gift ratio is more than 10k")
+        return
 
-    # # Join channel
-    # await client(JoinChannelRequest(input_channel))
-    # full_channel = await client(GetFullChannelRequest(input_channel))
-    # channel_set.add(input_channel.channel_id)
-    
-    # # update local channel_set
-    # with open(pkl_file, 'wb') as f:
-    #     pickle.dump(channel_set, f)
-    # print(channel_set)
-    
-    # print(full_channel)
-    
-    # # Archive channel
-    # await client.edit_folder(input_channel, 1)
-            
+    # Participate in the giveaway
+    for channel_id in giveaway.channels:
+        input_channel = await client.get_input_entity(channel_id)
+        
+        # join channel (Archived), *move to a shared folder
+        await client(JoinChannelRequest(input_channel))
+        await client.edit_folder(input_channel, 1)
+        
+        # update local channel_set
+        channel_set.add(input_channel.channel_id)
+        with open(pkl_file, 'wb') as f:
+            pickle.dump(channel_set, f)
+        print(channel_set)            
                 
 
 client.start()

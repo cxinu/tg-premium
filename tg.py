@@ -3,7 +3,14 @@ import dotenv
 from telethon import TelegramClient, events
 from telethon.tl.functions.channels import GetFullChannelRequest
 
-# File for testing telethon
+# ------------------------------------------------
+# This File is for testing telethon api & Project planning
+
+# TODO:
+# Implement Adding chats to custom folders and create new folder if limit reached 
+# Test if still can join channel after leaving
+# Make this script upand running on digital Ocial (github actions?, auto deploy?, docker container?)
+# ------------------------------------------------
 
 dotenv.load_dotenv()
 api_id = int(os.environ['API_ID'])
