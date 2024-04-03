@@ -6,9 +6,11 @@ from telethon.tl.functions.channels import JoinChannelRequest, GetFullChannelReq
 from telethon.tl.functions.messages import SendMessageRequest
 from telethon.tl.types import InputReplyToMessage
 import pickle
+import asyncio
 
-
+lock = asyncio.Lock()
 dotenv.load_dotenv()
+
 api_id = int(os.environ['API_ID'])
 api_hash = os.environ['API_HASH']
 client = TelegramClient('jackP', api_id, api_hash)
@@ -35,7 +37,6 @@ if not os.path.exists(hash_file):
 else:
     with open(hash_file, 'rb') as f:
         channel_map = pickle.load(f)
-    
 
 # Main Event handler
 @client.on(events.NewMessage(chats=channel_set))
@@ -65,6 +66,7 @@ async def handle_new_message(event):
             full_channel = await client(GetFullChannelRequest(input_channel))
         except Exception as e:
             print("Error getting full channel:", e)
+            print("×××××××××××××××××××××××××××××")
             return
         
         member_counts.append(full_channel.full_chat.participants_count)
@@ -76,6 +78,7 @@ async def handle_new_message(event):
     
     if gift_ratio > 10000:
         print("Gift ratio is more than 10k")
+        print("×××××××××××××××××××××××××××××")
         return
     
     # Add hash to channel_map
@@ -99,6 +102,8 @@ async def handle_new_message(event):
             await client(JoinChannelRequest(input_channel))
         except Exception as e:
             print("Error joining channel:", e)
+            print("×××××××××××××××××××××××××××××")
+
         await client.edit_folder(input_channel, 1)
         
         # update local channel_set
