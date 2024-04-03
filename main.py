@@ -1,16 +1,11 @@
-import os
-import dotenv
+import os, dotenv, pickle, asyncio, time
 from telethon import TelegramClient, events
-from telethon.tl.types import MessageMediaGiveaway
-from telethon.tl.functions.channels import JoinChannelRequest, GetFullChannelRequest
+from telethon.tl.types import MessageMediaGiveaway, InputReplyToMessage
+from telethon.tl.functions.channels import JoinChannelRequest, GetFullChannelRequest, LeaveChannelRequest
 from telethon.tl.functions.messages import SendMessageRequest
-from telethon.tl.types import InputReplyToMessage
-import pickle
-import asyncio
 
-lock = asyncio.Lock()
+
 dotenv.load_dotenv()
-
 api_id = int(os.environ['API_ID'])
 api_hash = os.environ['API_HASH']
 client = TelegramClient('jackP', api_id, api_hash)
@@ -38,6 +33,62 @@ else:
     with open(hash_file, 'rb') as f:
         channel_map = pickle.load(f)
 
+# Cancel Participation
+async def cancel_participation(hash):
+    channels = channel_map[hash][0]
+    for channel_id in channels:
+        try:
+            input_channel = await client.get_input_entity(channel_id)
+            await client(LeaveChannelRequest(input_channel)) # type: ignore
+            await asyncio.sleep(1)
+        except Exception as e:
+            # rarely gonna happen but just in case
+            print("Error leaving channel:", e)
+
+        channel_set.difference_update(channels)
+        del channel_map[hash]
+        with open(set_file, 'wb') as f:
+            pickle.dump(channel_set, f)
+        with open(hash_file, 'wb') as f:
+            pickle.dump(channel_map, f)
+        
+        
+# Set or Update hash data
+async def set_update_hash(hash, channels, until_date, quantity):
+    member_counts = []
+    for channel_id in channels:
+        try:
+            input_channel = await client.get_input_entity(channel_id)
+            full_channel = await client(GetFullChannelRequest(input_channel)) # type: ignore
+        except Exception as e:
+            # Probably banned or private channel
+            print("Error getting full channel:", e)
+            print("×××××××××××××××××××××××××××××")
+            
+            if hash in channel_map:
+                await cancel_participation(hash)
+            return
+        
+        member_counts.append(full_channel.full_chat.participants_count) # type: ignore
+        print("Member count: ", full_channel.full_chat.participants_count) # type: ignore
+    
+    participants = min(member_counts)
+    gift_ratio = participants / quantity
+    print("Participants to Gift ratio: ", gift_ratio)
+    
+    
+    # If gift ratio is more than 10k, It's not worth participating
+    if gift_ratio > 10000:
+        print("Gift ratio is more than 10k")
+        print("×××××××××××××××××××××××××××××")
+        
+        if hash in channel_map:
+            await cancel_participation(hash)
+        return
+    
+    # Add hash to channel_map
+    channel_map[hash] = [channels, until_date, quantity, participants, gift_ratio]
+
 # Main Event handler
 @client.on(events.NewMessage(chats=channel_set))
 async def handle_new_message(event):
@@ -57,37 +108,20 @@ async def handle_new_message(event):
     if hash in channel_map:
         return
 
-    # check if the giveaway is worth participating
+    print("Link to giveaway: ", f"https://t.me/c/{hash}")
     print("Quantity of giveaway: ", giveaway.quantity)
-    member_counts = []
-    for channel_id in giveaway.channels:
-        input_channel = await client.get_input_entity(channel_id)
-        try:
-            full_channel = await client(GetFullChannelRequest(input_channel))
-        except Exception as e:
-            print("Error getting full channel:", e)
-            print("×××××××××××××××××××××××××××××")
-            return
-        
-        member_counts.append(full_channel.full_chat.participants_count)
-        print("Member count: ", full_channel.full_chat.participants_count)
+    print("Time until ends: ", giveaway.until_date)
     
-    participants = min(member_counts)
-    gift_ratio = participants / giveaway.quantity
-    print("Participants to Gift ratio: ", gift_ratio)
-    
-    if gift_ratio > 10000:
-        print("Gift ratio is more than 10k")
-        print("×××××××××××××××××××××××××××××")
-        return
-    
-    # Add hash to channel_map
-    channel_map[hash] = [og_channel_id, og_message_id, giveaway.channels, giveaway.until_date, giveaway.quantity, participants, gift_ratio]
+    # Evaluate chances and cofirm participation by adding hash
+    await set_update_hash(hash, giveaway.channels, giveaway.until_date, giveaway.quantity)
     
     with open(hash_file, 'wb') as f:
         pickle.dump(channel_map, f)
     
-    # Notify the user about the giveaway by replying to a message in another chat of specific id
+    
+    # Notify user about participation by replying to a message in another chat
+    participants = channel_map[hash][3]
+    gift_ratio = channel_map[hash][4]
     channel = await client.get_input_entity(event.chat_id)
     input_reply = InputReplyToMessage(event.message.id, reply_to_peer_id=channel)
     await client(SendMessageRequest(tg_premium_channel, f"Giveaway Alert: Participating with Quantity: {giveaway.quantity} Minimum Participants: {participants}, ratio: {gift_ratio}", reply_to=input_reply))
@@ -99,7 +133,7 @@ async def handle_new_message(event):
         
         # join channel (Archived), *move to a shared folder
         try:
-            await client(JoinChannelRequest(input_channel))
+            await client(JoinChannelRequest(input_channel)) # type: ignore
         except Exception as e:
             print("Error joining channel:", e)
             print("×××××××××××××××××××××××××××××")
@@ -107,14 +141,42 @@ async def handle_new_message(event):
         await client.edit_folder(input_channel, 1)
         
         # update local channel_set
-        channel_set.add(input_channel.channel_id)
+        channel_set.add(input_channel.channel_id) # type: ignore
         with open(set_file, 'wb') as f:
             pickle.dump(channel_set, f)
     
     print("-----------------------------")
-    # print(channel_set)
-    # print(channel_map)
-                
 
-client.start()
-client.run_until_disconnected()
+
+async def main():
+    while True:
+        print("------ Bot is running -------")
+        for hash in list(channel_map.keys()):
+            channels, until_date, quantity, participants, gift_ratio = channel_map[hash]
+            if time.time() > until_date + (60 * 60):
+                print("Giveaway ended: ", f"https://t.me/c/{hash}")
+                print("Participants: ", participants)
+                print("Gift ratio: ", gift_ratio)
+                
+                # Leave channel
+                await cancel_participation(hash)
+            else:
+                print("Giveaway still running: ", f"https://t.me/c/{hash}")
+                
+                # Update hash data
+                await set_update_hash(hash, channels, until_date, quantity)
+                print("Participants: ", participants)
+                print("Gift ratio: ", gift_ratio)
+            
+        await asyncio.sleep(6 * 60 * 60)  # Sleep for 6 hours
+
+
+
+async def run_main_and_until_disconnected():
+    await asyncio.gather(
+        main(),
+        client.run_until_disconnected() # type: ignore
+    ) # type: ignore
+
+with client:
+    client.loop.run_until_complete(run_main_and_until_disconnected())
