@@ -61,7 +61,11 @@ async def handle_new_message(event):
     member_counts = []
     for channel_id in giveaway.channels:
         input_channel = await client.get_input_entity(channel_id)
-        full_channel = await client(GetFullChannelRequest(input_channel))
+        try:
+            full_channel = await client(GetFullChannelRequest(input_channel))
+        except Exception as e:
+            print("Error getting full channel:", e)
+            return
         
         member_counts.append(full_channel.full_chat.participants_count)
         print("Member count: ", full_channel.full_chat.participants_count)
@@ -91,16 +95,20 @@ async def handle_new_message(event):
         input_channel = await client.get_input_entity(channel_id)
         
         # join channel (Archived), *move to a shared folder
-        await client(JoinChannelRequest(input_channel))
+        try:
+            await client(JoinChannelRequest(input_channel))
+        except Exception as e:
+            print("Error joining channel:", e)
         await client.edit_folder(input_channel, 1)
         
         # update local channel_set
         channel_set.add(input_channel.channel_id)
         with open(set_file, 'wb') as f:
             pickle.dump(channel_set, f)
-       
-    print(channel_set)
-    print(channel_map)
+    
+    print("-----------------------------")
+    # print(channel_set)
+    # print(channel_map)
                 
 
 client.start()
