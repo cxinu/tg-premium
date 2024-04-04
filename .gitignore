@@ -4,3 +4,4 @@
 *.session
 *.session-journal
 *.pkl
+*/**/__pycache__

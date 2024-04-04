@@ -27,13 +27,13 @@ def initialize_channels():
     
     return channel_set, channel_map
 
-def update_channel_set():
+def update_local_channel_set():
     global channel_set
     with open(set_file, 'wb') as f:
         pickle.dump(channel_set, f)
     return channel_set
 
-def update_channel_map():
+def update_local_channel_map():
     global channel_map
     with open(hash_file, 'wb') as f:
         pickle.dump(channel_map, f)
