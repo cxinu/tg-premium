@@ -71,15 +71,7 @@ async def handle_new_message(event):
 # Manage Current Giveaways
 async def main():
     while True:
-        print("- - - -Bot is running- - - -")
-        # for hash in list(channel_map.keys()):
-        #     print("----------------------------")
-        #     print(f"hash: {hash}")
-        #     print(f"Channels: {channel_map[hash][0]}")
-        #     print(f"Until date: {channel_map[hash][1]}")
-        #     print(f"Quantity: {channel_map[hash][2]}")
-        #     print(f"Participants: {channel_map[hash][3]}")
-        #     print(f"Gift ratio: {channel_map[hash][4]}")
+        print("- - - -Bot is running- - - -")   
         for hash in list(channel_map.keys()):
             channels, until_date, quantity, participants, gift_ratio = channel_map[hash]
             if datetime.now(timezone.utc) > until_date + timedelta(hours=1):
