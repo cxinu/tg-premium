@@ -1,7 +1,7 @@
 /.venv
 /.vscode
 .env
-*.session
+# *.session
 *.session-journal
 *.pkl
 */**/__pycache__
