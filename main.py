@@ -1,4 +1,4 @@
-import os, dotenv, asyncio
+import asyncio
 from typing import List
 
 from datetime import datetime, timedelta, timezone
